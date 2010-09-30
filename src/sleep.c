@@ -1,16 +1,31 @@
-#include <linux/module.h>
+/*
+ * sleep.c -- A simple char driver that demonstrates
+ *            putting a process to sleep.
+ * 
+ * Copyright (C) 2010 John Steele
+ * $Id: sleep.c, v 1.0.0 2010/09/29
+ */
+
+#include <linux/module.h> 
 #include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/wait.h>
-#include <linux/types.h>
-#include <linux/fs.h>
-#include <linux/cdev.h>
-#include <linux/moduleparam.h>
+#include <linux/kernel.h>      /* printk()          */
+#include <linux/wait.h>        /* wait_queue_head_t */
+#include <linux/types.h>       /* ssize_t, etc      */
+#include <linux/fs.h>          /* file_operations   */
+#include <linux/cdev.h>        /* cdev              */
+#include <linux/moduleparam.h> /* module_param      */
 
-#include "sleepy.h"
+#include "sleepy.h"            /* definitions       */
 
+/*
+ * Dynamically allocated char devices.
+ * See driver_init() for details. 
+ */
 struct cdev *my_devices;
 
+/* 
+ * Optionally user specified values. 
+ */
 int my_major = MY_MAJOR;
 int my_minor = MY_MINOR;
 int my_num_devices = MY_NUM_DEVICES;
@@ -20,6 +35,9 @@ module_param(my_minor, int, S_IRUGO);
 module_param(my_num_devices, int, S_IRUGO);
 
 
+/*
+ * Read from the device.
+ */
 ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 			loff_t *f_pos)
 {
@@ -27,6 +45,9 @@ ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 }
 
 
+/*
+ * Write to the device.
+ */
 ssize_t device_write(struct file *filp, const char __user *buf, size_t count, 
 			loff_t *f_pos)
 {
@@ -34,6 +55,11 @@ ssize_t device_write(struct file *filp, const char __user *buf, size_t count,
 } 
 
 
+/* 
+ * The functions defined by this driver
+ * that perform various operations on the
+ * device.
+ */
 struct file_operations fops = {
 	.owner = THIS_MODULE,	
 	.read  = device_read,
@@ -41,6 +67,12 @@ struct file_operations fops = {
 };
 
 
+/*
+ * Initializes the provided cdev.
+ * 
+ * @the_cdev The cdev to initialize.
+ * @the_index The index of the cdev in my_devices.
+ */
 static void setup_cdev(struct cdev *the_cdev, const int the_index)
 {
 	int error;
@@ -56,6 +88,9 @@ static void setup_cdev(struct cdev *the_cdev, const int the_index)
 }
 
 
+/*
+ * Cleanup the sleepy_module resources. 
+ */
 static void __exit device_cleanup(void) 
 {
 	int i;
@@ -71,6 +106,11 @@ static void __exit device_cleanup(void)
 }
 
 
+/*
+ * Initialize the driver.
+ *
+ * @return 0 for success, failure code otherwise.
+ */
 static int __init device_init(void)
 {
 	int result, i;
