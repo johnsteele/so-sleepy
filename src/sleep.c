@@ -15,6 +15,7 @@
 #include <linux/fs.h>          /* file_operations   */
 #include <linux/cdev.h>        /* cdev              */
 #include <linux/moduleparam.h> /* module_param      */
+#include <linux/errno.h>  
 
 #include "sleepy.h"            /* definitions       */
 
@@ -55,7 +56,23 @@ ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 	 * by the macro before and after sleeping; until condition evaluates 
          * to true value, the prcess continues to sleep. 
        	 */
-	wait_event_interruptible(my_wait_queue, flag != 0 /* condition */);		
+
+	/*
+ 	 * wait_event_interruptible returns an int value that should be checked. 
+	 * - a nonzero value means your sleep was interrupted by some sort of signal,
+	 *   and your driver should probably return -ERESTARTSYS. 
+  	 */
+
+	if (wait_event_interruptible(my_wait_queue, flag != 0 /* condition */) != 0) {
+		return -ERESTARTSYS;
+	}		
+
+	/*
+ 	 * Never make assumptions about the state of the system after waking up.
+	 * There might have been another process waiting that woke up before you
+	 * and grabbed whatever you were waiting for, so you must make sure, once
+	 * awake that the resource you were waiting for is indeed available.
+  	 */
 	flag = 0;
 	
 	printk(KERN_NOTICE "Process %i (%s) awoken.\n", current->pid, current->comm);
