@@ -1,7 +1,7 @@
 #!/bin/sh
 # $Id: load_script.sh, v 1.0.0 2010/08/29 John Exp $
 module="sleep-mod"
-device="sleep-mod"
+device="sleepy_module"
 mode="664" #read and write 
 
 
@@ -27,7 +27,7 @@ fi
 /sbin/insmod ./$module.ko $* || exit 1
 
 #Get the driver major.
-major=$(awk "\$2==\"$module\" {print \$1}" /proc/devices)
+major=$(awk "\$2==\"$device\" {print \$1}" /proc/devices)
 
 #Remove the stale nodes.
 rm -f /dev/${device}0
