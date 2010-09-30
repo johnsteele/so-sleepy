@@ -10,7 +10,8 @@
 #include <linux/init.h>
 #include <linux/kernel.h>      /* printk()          */
 #include <linux/wait.h>        /* wait_queue_head_t */
-#include <linux/types.h>       /* ssize_t, etc      */
+#include <linux/sched.h>       /* current, etc.     */ 
+#include <linux/types.h>       /* size_t, etc.      */
 #include <linux/fs.h>          /* file_operations   */
 #include <linux/cdev.h>        /* cdev              */
 #include <linux/moduleparam.h> /* module_param      */
@@ -34,14 +35,32 @@ module_param(my_major, int, S_IRUGO);
 module_param(my_minor, int, S_IRUGO);
 module_param(my_num_devices, int, S_IRUGO);
 
-
+/*
+ * The queue that tracks waiting processes.
+ */
+static DECLARE_WAIT_QUEUE_HEAD(my_wait_queue);
+static int flag = 0;
+ 
 /*
  * Read from the device.
  */
 ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 			loff_t *f_pos)
 {
-	return count;
+	printk(KERN_NOTICE "Process %i (%s) is going to sleep.\n",
+			current->pid, current->comm);
+
+	/*
+	 * The condition is an arbitrary boolean expression that is evaluated
+	 * by the macro before and after sleeping; until condition evaluates 
+         * to true value, the prcess continues to sleep. 
+       	 */
+	wait_event_interruptible(my_wait_queue, flag != 0 /* condition */);		
+	flag = 0;
+	
+	printk(KERN_NOTICE "Process %i (%s) awoken.\n", current->pid, current->comm);
+
+	return 0; /* EOF */
 }
 
 
@@ -51,6 +70,12 @@ ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 ssize_t device_write(struct file *filp, const char __user *buf, size_t count, 
 			loff_t *f_pos)
 {
+	printk(KERN_NOTICE "Process %i (%s) waking up all interruptible sleeping processes.\n",
+			current->pid, current->comm);	
+
+	flag = 1;
+	wake_up_interruptible(&my_wait_queue);
+	
 	return count;
 } 
 
