@@ -73,6 +73,12 @@ ssize_t device_read(struct file *filp, char __user *buf, size_t count,
 	 * and grabbed whatever you were waiting for, so you must make sure, once
 	 * awake that the resource you were waiting for is indeed available.
   	 */
+
+	/* 
+	 * If correct operation required that exactly one process see the nonzero vlaue, 
+	 * it would have to be tested in an atomic manner.
+         */ 
+
 	flag = 0;
 	
 	printk(KERN_NOTICE "Process %i (%s) awoken.\n", current->pid, current->comm);
